@@ -16,3 +16,9 @@ table {
 td {
 	font-size: 9em;
 }
+
+.end {
+	font-size: 2em;
+	margin: auto;
+	visibility: hidden;
+}
