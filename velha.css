@@ -1,0 +1,18 @@
+html {
+	background-color: hsla(183, 67%, 35%, 1);
+}
+
+h1 {
+	font-size: 3em;
+	text-align: center;
+	color: hsla(29, 88%, 35%, 1);
+}
+
+table {
+	margin: auto;
+	background-color: white;
+}
+
+td {
+	font-size: 9em;
+}
