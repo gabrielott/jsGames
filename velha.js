@@ -3,6 +3,7 @@ const endObjects = document.getElementsByClassName("end");
 
 let current = true;
 let over = false;
+let round = 0;
 
 document.getElementById("end-button").addEventListener("click", handleEndClick);
 
@@ -52,6 +53,8 @@ function handleClick(event) {
 	}
 
 	current = !current;
+
+	if(++round == 9) end(null);
 }
 
 function handleEndClick(event) {
@@ -67,10 +70,16 @@ function handleEndClick(event) {
 
 	current = true;
 	over = false;
+	round = 0;
 }
 
 function end(winner) {
-	document.getElementById("end-message").innerHTML = (winner ? "X" : "O") + " ganhou!";
+	if(winner === null) {
+		document.getElementById("end-message").innerHTML = "Empate!";
+	} else {
+		document.getElementById("end-message").innerHTML = (winner ? "X" : "O") + " ganhou!";
+	}
+
 	over = true;
 
 	for(let object of endObjects) {
