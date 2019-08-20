@@ -54,7 +54,7 @@ function handleClick(event) {
 
 	current = !current;
 
-	if(++round == 9) end(null);
+	if(++round === 9) end(null);
 }
 
 function handleEndClick(event) {
