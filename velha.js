@@ -32,24 +32,36 @@ function handleClick(event) {
 	// Horizontal
 	for(let i = 0; i < 3; i++) {
 		if(fields[line][i].innerHTML !== clicked.innerHTML) break;
-		if(i === 2) end(current);
+		if(i === 2) {
+			end(current);
+			return;
+		}
 	}
 
 	// Vertical
 	for(let i = 0; i < 3; i++) {
 		if(fields[i][row].innerHTML !== clicked.innerHTML) break;
-		if(i === 2) end(current);
+		if(i === 2) {
+			end(current);
+			return;
+		}
 	}
 
 	// Diagonais
 	for(let i = 0; i < 3; i++) {
 		if(fields[i][i].innerHTML !== clicked.innerHTML) break;
-		if(i === 2) end(current);
+		if(i === 2) {
+			end(current);
+			return;
+		}
 	}
 
 	for(let i = 0; i < 3; i++) {
 		if(fields[i][2 - i].innerHTML !== clicked.innerHTML) break;
-		if(i === 2) end(current);
+		if(i === 2) {
+			end(current);
+			return;
+		}
 	}
 
 	current = !current;
