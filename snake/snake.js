@@ -9,9 +9,17 @@ const partColor = "black";
 function Coord(x, y) {
 	this.x = x;
 	this.y = y;
-	this.draw = function() {
+	this.drawPart = function() {
 		ctx.beginPath();
 		ctx.rect(this.x, this.y, partSize, partSize);
+		ctx.fillStyle = partColor;
+		ctx.fill();
+		ctx.closePath();
+	}
+
+	this.drawFood = function() {
+		ctx.beginPath();
+		ctx.arc(this.x, this.y, partSize / 2, 0, Math.PI * 2);
 		ctx.fillStyle = partColor;
 		ctx.fill();
 		ctx.closePath();
@@ -29,24 +37,28 @@ document.addEventListener("keydown", (e) => {
 	switch(e.key) {
 		case "ArrowUp":
 			if(direction === Direction.south) break;
-			direction = Direction.north; break;
+			nextDirection = Direction.north; break;
 		case "ArrowRight":
 			if(direction === Direction.west) break;
-			direction = Direction.east; break;
+			nextDirection = Direction.east; break;
 		case "ArrowLeft":
 			if(direction === Direction.east) break;
-			direction = Direction.west; break;
+			nextDirection = Direction.west; break;
 		case "ArrowDown":
 			if(direction === Direction.north) break;
-			direction = Direction.south; break;
+			nextDirection = Direction.south; break;
 	}
 });
 
 const snake = []
-let direction = Direction.north;
+let direction = null
+let nextDirection = Direction.north;
+let food = null;
 
 for(let i = 0; i < (partSize + partGap) * partInitAmount; i += partSize + partGap) {
-	snake.push(new Coord(canvas.width / 2, canvas.height / 2 + i));
+	const x = Math.round(canvas.width / 2 / (partSize + partGap)) * (partSize + partGap);
+	const y = Math.round(canvas.height / 2 / (partSize + partGap)) * (partSize + partGap);
+	snake.push(new Coord(x, y + i));
 }
 
 setInterval(update, 200);
@@ -54,8 +66,10 @@ setInterval(update, 200);
 function update() {
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-	snake.forEach((p) => p.draw());
+	direction = nextDirection;
+	snake.forEach((p) => p.drawPart());
 
+	// Create new head
 	const head = (() => {
 		switch(direction) {
 			case Direction.north:
@@ -69,6 +83,27 @@ function update() {
 		}
 	})();
 
-	snake.pop();
+	// Create new food if needed or remove tail otherwise
+	if(food === null || (head.x === food.x && head.y === food.y)) {
+		let foodX;
+		let fooxY;
+
+		do {
+			foodX = Math.round(Math.floor(Math.random() * canvas.width) / (partSize + partGap)) * (partSize + partGap);
+			foodY = Math.round(Math.floor(Math.random() * canvas.height) / (partSize + partGap)) * (partSize + partGap);
+		} while(snake.some((p) => foodX === p.x && foodY === p.y));
+
+		food = new Coord(foodX, foodY);
+		console.log("food", food.x, food.y);
+	} else {
+		food.drawFood();
+		snake.pop();
+	}
+
+	// Check whether snake is out of bounds
+	if(head.x > canvas.width || head.x < 0 || head.y > canvas.height || head.y < 0) {
+		console.log("out");
+	}
+
 	snake.unshift(head);
 }
