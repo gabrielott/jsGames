@@ -3,6 +3,6 @@ A collection of simple games written on pure Javascript with the purpose of gett
 
 ## Games
 * velha
-  A tic-tac-toe game
+  * A tic-tac-toe game
 * snake
-  The classic snake game
+  * The classic snake game
