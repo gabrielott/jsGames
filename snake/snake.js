@@ -85,7 +85,7 @@ function setup() {
 		snake.push(new Coord(x, y + i));
 	}
 
-	interval = setInterval(update, 200);
+	interval = setInterval(update, 50);
 }
 
 function update() {
@@ -99,11 +99,13 @@ function update() {
 		let foodY;
 
 		do {
-			foodX = Math.round(Math.floor(Math.random() * canvas.width) / (partSize + partGap)) * (partSize + partGap);
-			foodY = Math.round(Math.floor(Math.random() * canvas.height) / (partSize + partGap)) * (partSize + partGap);
+			foodX = Math.floor(Math.random() * canvas.width / (partSize + partGap)) * (partSize + partGap);
+			foodY = Math.floor(Math.random() * canvas.height / (partSize + partGap)) * (partSize + partGap);
 		} while(snake.some((p) => foodX === p.x && foodY === p.y));
 
 		food = new Coord(foodX, foodY);
+
+		console.log(foodX, foodY);
 	} else {
 		snake.pop();
 	}
