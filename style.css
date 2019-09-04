@@ -1,0 +1,29 @@
+html {
+	background-color: #1C5480;
+	font-size: 20px;
+	text-align: center;
+}
+
+body {
+	margin: 0;
+	padding: 0;
+}
+
+h1 {
+	font: 3em Helveltica, Arial, sans-serif;
+	color: #2A7FBF;
+	background-color: #0E2A40;
+}
+
+a {
+	font-size: 2em;
+	color: #38A9FF;
+	text-decoration: none;
+	padding: 5px;
+}
+
+a:hover {
+	color: #2CCEFF;
+	background: #2A7FBF;
+	border-bottom: 3px solid;
+}
