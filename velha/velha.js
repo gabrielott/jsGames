@@ -22,8 +22,9 @@ function handleClick(event) {
 
 	const clicked = event.target;
 
-	if(clicked.innerHTML !== "_") return;
+	if(clicked.innerHTML !== "") return;
 	clicked.innerHTML = current ? "X" : "O";
+	clicked.setAttribute("data-clicked", "true");
 
 	const id = clicked.id;
 	const line = Math.floor(id / 3);
@@ -72,7 +73,8 @@ function handleClick(event) {
 function handleEndClick(event) {
 	for(let line of fields) {
 		for(let field of line) {
-			field.innerHTML = "_";
+			field.innerHTML = "";
+			field.setAttribute("data-clicked", "false");
 		}
 	}
 
