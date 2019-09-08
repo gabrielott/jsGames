@@ -3,12 +3,15 @@ const ctx = canvas.getContext("2d");
 
 const partInitAmount = 4;
 const partSize = 10;
-const partGap = 0;
 const partColor = "black";
+const fps = 60;
+const speed = 100;
 
-function Coord(x, y) {
+function Coord(x, y, direction) {
 	this.x = x;
 	this.y = y;
+	this.direction = direction;
+
 	this.drawPart = function() {
 		ctx.beginPath();
 		ctx.rect(this.x, this.y, partSize, partSize);
@@ -18,13 +21,30 @@ function Coord(x, y) {
 	}
 
 	this.drawFood = function() {
-		const visualX = this.x + (partSize + partGap) / 2;
-		const visualY = this.y + (partSize + partGap) / 2;
+		const visualX = this.x + partSize / 2;
+		const visualY = this.y + partSize / 2;
 		ctx.beginPath();
 		ctx.arc(visualX, visualY, partSize / 2, 0, Math.PI * 2);
 		ctx.fillStyle = partColor;
 		ctx.fill();
 		ctx.closePath();
+	}
+
+	this.move = function(direction, offset) {
+		let newX = this.x;
+		let newY = this.y;
+		switch(direction) {
+			case Direction.north:
+				newY = this.y - offset; break;
+			case Direction.south:
+				newY = this.y + offset; break;
+			case Direction.east:
+				newX = this.x + offset; break;
+			case Direction.west:
+				newX = this.x - offset; break;
+		}
+
+		return new Coord(newX, newY, direction);
 	}
 }
 
@@ -55,8 +75,7 @@ document.addEventListener("keydown", (e) => {
 			nextDirection = Direction.south; break;
 		case "Enter":
 		case " ":
-			if(!over) break;
-			setup(); break;
+			if(isOver) setup();
 	}
 });
 
@@ -68,7 +87,11 @@ const snake = [];
 let direction;
 let nextDirection;
 let food;
-let over = true;
+let isOver = true;
+let isGrowing;
+let frames;
+let visualHead;
+let visualTail;
 let interval;
 
 function setup() {
@@ -76,74 +99,86 @@ function setup() {
 	direction = null;
 	nextDirection = Direction.north;
 	food = null;
-	over = false;
+	isOver = false;
+	isGrowing = false;
+	frames = speed;
 
 	// Fills the array with the snake's inital parts
-	for(let i = 0; i < (partSize + partGap) * partInitAmount; i += partSize + partGap) {
-		const x = Math.round(canvas.width / 2 / (partSize + partGap)) * (partSize + partGap);
-		const y = Math.round(canvas.height / 2 / (partSize + partGap)) * (partSize + partGap);
-		snake.push(new Coord(x, y + i));
+	for(let i = 0; i < partSize * partInitAmount; i += partSize) {
+		const x = Math.round(canvas.width / 2 / partSize) * partSize;
+		const y = Math.round(canvas.height / 2 / partSize) * partSize;
+		snake.push(new Coord(x, y + i, Direction.north));
 	}
 
-	interval = setInterval(update, 50);
+	interval = setInterval(update, 1000 / fps);
 }
 
 function update() {
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
-	direction = nextDirection;
+	frames++;
 
-	// Creates new food when needed, making sure it doesn't spawn on the snake
-	// In this case, the snake's tail doesn't get removed, which makes the snake grow
-	if(food === null || (snake[0].x === food.x && snake[0].y === food.y)) {
-		let foodX;
-		let foodY;
+	// Runs every speed milliseconds
+	if(1000 / fps * frames / speed >= 1) {
+		frames = 0;
 
-		do {
-			foodX = Math.floor(Math.random() * canvas.width / (partSize + partGap)) * (partSize + partGap);
-			foodY = Math.floor(Math.random() * canvas.height / (partSize + partGap)) * (partSize + partGap);
-		} while(snake.some((p) => foodX === p.x && foodY === p.y));
-
-		food = new Coord(foodX, foodY);
-
-		console.log(foodX, foodY);
-	} else {
-		snake.pop();
-	}
-
-	food.drawFood();
-
-	// Creates the snake's new head
-	const head = (() => {
-		switch(direction) {
-			case Direction.north:
-				return new Coord(snake[0].x, snake[0].y - partSize - partGap);
-			case Direction.south:
-				return new Coord(snake[0].x, snake[0].y + partSize + partGap);
-			case Direction.east:
-				return new Coord(snake[0].x + partSize + partGap, snake[0].y);
-			case Direction.west:
-				return new Coord(snake[0].x - partSize - partGap, snake[0].y);
+		// Fixes the movement of the last part of the snake when changing direction
+		if(direction !== nextDirection) {
+			snake[0].direction = nextDirection;
+			direction = nextDirection;
 		}
-	})();
 
-	// Checks whether the snake is out of bounds
-	if(head.x > canvas.width || head.x < 0 || head.y > canvas.height || head.y < 0) {
-		gameover();
+		// Creates new food when needed, making sure it doesn't spawn on the snake
+		// In this case, the snake's tail doesn't get removed, which makes the snake grow
+		if(food === null || (snake[0].x === food.x && snake[0].y === food.y)) {
+			let foodX;
+			let foodY;
+
+			do {
+				foodX = Math.floor(Math.random() * canvas.width / partSize) * partSize;
+				foodY = Math.floor(Math.random() * canvas.height / partSize) * partSize;
+			} while(snake.some((p) => foodX === p.x && foodY === p.y));
+
+			if(food !== null) isGrowing = true;
+			food = new Coord(foodX, foodY);
+		} else {
+			snake.pop();
+			isGrowing = false;
+		}
+
+		// Creates the snake's new head
+		const head = snake[0].move(direction, partSize);
+
+		// Sets the starting point of the parts used to animate the snake
+		visualHead = snake[0];
+		visualTail = snake[snake.length - 1];
+
+		// Checks whether the snake is out of bounds
+		if(head.x > canvas.width || head.x < 0 || head.y > canvas.height || head.y < 0) {
+			gameover();
+		}
+
+		// Checks whether the snake hit itself
+		if(snake.some((p) => head.x === p.x && head.y === p.y)) {
+			gameover();
+		}
+
+		snake.unshift(head);
+	} else {
+		// Animates the snake
+		visualHead = visualHead.move(visualHead.direction, partSize / (speed / (1000 / fps)));
+		visualTail = visualTail.move(visualTail.direction, partSize / (speed / (1000 / fps)));
 	}
 
-	// Checks whether the snake hit itself
-	if(snake.some((p) => head.x === p.x && head.y === p.y)) {
-		gameover();
-	}
-
-	snake.forEach((p) => p.drawPart());
-
-	snake.unshift(head);
+	// Draws everything
+	snake.slice(1, snake.length - 1).forEach((p) => p.drawPart());
+	visualHead.drawPart();
+	if(!isGrowing) visualTail.drawPart();
+	food.drawFood();
 }
 
 function gameover() {
 	clearInterval(interval);
-	over = true;
+	isOver = true;
 
 	ctx.font = "30px Arial";
 	ctx.fillText("Game Over", canvas.width / 2, canvas.height / 2);
