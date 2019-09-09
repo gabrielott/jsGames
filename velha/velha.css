@@ -16,6 +16,7 @@ h1, h2 {
 h1 {
 	color: #2A7FBF;
 	background-color: #0E2A40;
+	margin-top: 0;
 }
 
 .field {

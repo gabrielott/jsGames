@@ -2,6 +2,7 @@ html {
 	background-color: #1C5480;
 	font-size: 20px;
 	text-align: center;
+	font-family: Helveltica, Arial, sans-serif;
 }
 
 body {
@@ -10,7 +11,7 @@ body {
 }
 
 h1 {
-	font: 3em Helveltica, Arial, sans-serif;
+	font-size: 3em;
 	color: #2A7FBF;
 	background-color: #0E2A40;
 }
