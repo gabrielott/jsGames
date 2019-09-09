@@ -2,10 +2,10 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
 const partInitAmount = 4;
-const partSize = 10;
-const partColor = "black";
+const partSize = 20;
+const partColor = "#0E2A40";
 const fps = 60;
-const speed = 100;
+const speed = 150;
 
 function Coord(x, y, direction) {
 	this.x = x;
@@ -89,6 +89,7 @@ let nextDirection;
 let food;
 let isOver = true;
 let isGrowing;
+let score;
 let frames;
 let visualHead;
 let visualTail;
@@ -101,6 +102,7 @@ function setup() {
 	food = null;
 	isOver = false;
 	isGrowing = false;
+	score = 0;
 	frames = speed;
 
 	// Fills the array with the snake's inital parts
@@ -140,6 +142,8 @@ function update() {
 
 			if(food !== null) isGrowing = true;
 			food = new Coord(foodX, foodY);
+
+			document.getElementById("score").innerHTML = `Score: ${score++}`;
 		} else {
 			snake.pop();
 			isGrowing = false;
