@@ -2,7 +2,7 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
 const partInitAmount = 4;
-const partSize = 20;
+const partSize = 25;
 const partColor = "#0E2A40";
 const fps = 60;
 const speed = 150;
@@ -162,7 +162,7 @@ function update() {
 		}
 
 		// Checks whether the snake hit itself
-		if(snake.some((p) => head.x === p.x && head.y === p.y)) {
+		if(snake.slice(0, snake.length - 1).some((p) => head.x === p.x && head.y === p.y)) {
 			gameover();
 		}
 
