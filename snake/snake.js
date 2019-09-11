@@ -5,7 +5,7 @@ const partInitAmount = 4;
 const partSize = 25;
 const partColor = "#0E2A40";
 const fps = 60;
-const speed = 150;
+const speed = 100;
 
 function Coord(x, y, direction) {
 	this.x = x;
@@ -48,6 +48,26 @@ function Coord(x, y, direction) {
 	}
 }
 
+function addMove(direction) {
+	if(direction === moves[moves.length - 1]) return;
+	switch(moves.length === 0 ? lastDirection : moves[moves.length - 1]) {
+		case Direction.north:
+			if(direction === Direction.south) return;
+			break;
+		case Direction.south:
+			if(direction === Direction.north) return;
+			break;
+		case Direction.west:
+			if(direction === Direction.east) return;
+			break;
+		case Direction.east:
+			if(direction === Direction.west) return;
+			break;
+	}
+
+	moves.push(direction);
+}
+
 const Direction = Object.freeze({
 	"north": 1,
 	"south": 2,
@@ -59,20 +79,16 @@ document.addEventListener("keydown", (e) => {
 	switch(e.key) {
 		case "ArrowUp":
 		case "w":
-			if(direction === Direction.south) break;
-			nextDirection = Direction.north; break;
+			addMove(Direction.north); break;
 		case "ArrowRight":
 		case "d":
-			if(direction === Direction.west) break;
-			nextDirection = Direction.east; break;
+			addMove(Direction.east); break;
 		case "ArrowLeft":
 		case "a":
-			if(direction === Direction.east) break;
-			nextDirection = Direction.west; break;
+			addMove(Direction.west); break;
 		case "ArrowDown":
 		case "s":
-			if(direction === Direction.north) break;
-			nextDirection = Direction.south; break;
+			addMove(Direction.south); break;
 		case "Enter":
 		case " ":
 			if(isOver) setup();
@@ -84,9 +100,10 @@ ctx.font = "30px Arial";
 ctx.fillText("Press enter to start", canvas.width / 2, canvas.height / 2);
 
 const snake = [];
-let direction;
-let nextDirection;
+const moves = [];
 let food;
+let direction;
+let lastDirection;
 let isOver = true;
 let isGrowing;
 let score;
@@ -97,9 +114,10 @@ let interval;
 
 function setup() {
 	snake.length = 0;
-	direction = null;
-	nextDirection = Direction.north;
+	moves.length = 0;
 	food = null;
+	direction = Direction.north;
+	lastDirection = Direction.north;
 	isOver = false;
 	isGrowing = false;
 	score = 0;
@@ -123,10 +141,13 @@ function update() {
 	if(1000 / fps * frames / speed >= 1) {
 		frames = 0;
 
+		const nextMove = moves.shift();
+		if(nextMove !== undefined) direction = nextMove;
+
 		// Fixes the movement of the last part of the snake when changing direction
-		if(direction !== nextDirection) {
-			snake[0].direction = nextDirection;
-			direction = nextDirection;
+		if(direction !== lastDirection) {
+			snake[0].direction = direction;
+			lastDirection = direction;
 		}
 
 		// Creates new food when needed, making sure it doesn't spawn on the snake
@@ -157,7 +178,7 @@ function update() {
 		visualTail = snake[snake.length - 1];
 
 		// Checks whether the snake is out of bounds
-		if(head.x > canvas.width || head.x < 0 || head.y > canvas.height || head.y < 0) {
+		if(head.x >= canvas.width || head.x < 0 || head.y >= canvas.height || head.y < 0) {
 			gameover();
 		}
 
