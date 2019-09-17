@@ -1,6 +1,33 @@
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
+const GRIDUNIT = 30;
+const MAX_X = 50;
+const MAX_Y = 50;
+
+class Coord {
+	constructor(x, y) {
+		this.x = x;
+		this.y = y;
+	}
+
+	get pixelX() {
+		return this.x * GRIDUNIT;
+	}
+
+	get pixelY() {
+		return this.y * GRIDUNIT;
+	}
+
+	toPixels() {
+		return new Coord(this.x * GRIDUNIT, this.y * GRIDUNIT);
+	}
+
+	static fromPixels(x, y) {
+		return new Coord(Math.round(x / GRIDUNIT) * GRIDUNIT, Math.round(y / GRIDUNIT) * GRIDUNIT);
+	}
+}
+
 const Direction = Object.freeze({
 	"north": 1,
 	"south": 2,
@@ -8,46 +35,37 @@ const Direction = Object.freeze({
 	"west" : 4
 });
 
-drawWall(100, 300, Direction.south, 100, 20);
+function drawWall(coord, length, direction) {
+	let xSize;
+	let ySize;
 
-ctx.beginPath();
-ctx.arc(200, 200, 20, 0, Math.PI / 2);
-ctx.stroke();
-
-function drawWall(x1, y1, direction, length, thickness) {
-	let x2 = x1;
-	let y2 = y1;
 	switch(direction) {
 		case Direction.north:
-			y2 -= length; break;
+			ySize = -length * GRIDUNIT; break;
 		case Direction.south:
-			y2 += length; break;
-		case Direction.west:
-			x2 -= length; break;
+			ySize = length * GRIDUNIT; break;
 		case Direction.east:
-			x2 += length; break;
+			xSize = length * GRIDUNIT; break;
+		case Direction.west:
+			xSize = -length * GRIDUNIT; break;
+	}
+
+	if(direction === Direction.north || direction === Direction.south) {
+		xSize = GRIDUNIT;
+	} else {
+		ySize = GRIDUNIT;
 	}
 
 	ctx.beginPath();
-	ctx.moveTo(x1, y1);
-	ctx.lineTo(x2, y2);
-
-	if(direction === Direction.north || direction === Direction.south) {
-		ctx.moveTo(x1 + thickness, y1);
-		ctx.lineTo(x2 + thickness, y2);
-	} else {
-		ctx.moveTo(x1, y1 + thickness);
-		ctx.lineTo(x2, y2 + thickness);
-	}
-
-	ctx.stroke();
-}
-
-function drawCorner(x, y, d1, d2) {
+	ctx.rect(coord.pixelX, coord.pixelY, xSize, ySize);
+	ctx.fill();
 }
 
 function setup() {
+	drawWall(new Coord(1, 1), 19, Direction.east);
 }
 
 function update() {
 }
+
+setup();
