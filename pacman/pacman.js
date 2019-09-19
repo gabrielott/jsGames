@@ -4,6 +4,13 @@ const ctx = canvas.getContext("2d");
 const GRIDUNIT = 25;
 const MAX_X = 50;
 const MAX_Y = 50;
+const Direction = Object.freeze({
+	"north": 1,
+	"south": 2,
+	"east" : 3,
+	"west" : 4
+});
+
 
 class Coord {
 	constructor(x, y) {
@@ -28,13 +35,6 @@ class Coord {
 	}
 }
 
-const Direction = Object.freeze({
-	"north": 1,
-	"south": 2,
-	"east" : 3,
-	"west" : 4
-});
-
 function drawWall(coord, length, direction) {
 	let xSize = GRIDUNIT;
 	let ySize = GRIDUNIT;
@@ -53,10 +53,18 @@ function drawWall(coord, length, direction) {
 	const x = direction === Direction.west ? coord.pixelX + GRIDUNIT : coord.pixelX;
 	const y = direction === Direction.north ? coord.pixelY + GRIDUNIT : coord.pixelY;
 
+	for(let i = 0; i < xSize / GRIDUNIT; i++) {
+		for(let j = 0; j < ySize / GRIDUNIT; j++) {
+			walls.push(new Coord(x + i, y + j));
+		}
+	}
+
 	ctx.beginPath();
 	ctx.rect(x, y, xSize, ySize);
 	ctx.fill();
 }
+
+const walls = [];
 
 function setup() {
 	drawWall(new Coord(1, 1), 19, Direction.east);
@@ -92,6 +100,28 @@ function setup() {
 	drawWall(new Coord(12, 10), 1, Direction.east);
 	drawWall(new Coord(8, 5), 5, Direction.east);
 	drawWall(new Coord(10, 6), 2, Direction.south);
+	drawWall(new Coord(12, 3), 3, Direction.east);
+	drawWall(new Coord(16, 3), 2, Direction.east);
+	drawWall(new Coord(16, 5), 2, Direction.east);
+	drawWall(new Coord(14, 5), 5, Direction.south);
+	drawWall(new Coord(13, 7), 2, Direction.west);
+	drawWall(new Coord(14, 11), 3, Direction.south);
+	drawWall(new Coord(12, 15), 3, Direction.east);
+	drawWall(new Coord(12, 19), 6, Direction.east);
+	drawWall(new Coord(14, 18), 2, Direction.north);
+	drawWall(new Coord(16, 17), 2, Direction.north);
+	drawWall(new Coord(16, 15), 2, Direction.east);
+	drawWall(new Coord(18, 17), 1, Direction.east);
+	drawWall(new Coord(19, 20), 8, Direction.north);
+	drawWall(new Coord(18, 13), 3, Direction.west);
+	drawWall(new Coord(16, 12), 2, Direction.north);
+	drawWall(new Coord(17, 11), 4, Direction.east);
+	drawWall(new Coord(17, 9), 4, Direction.east);
+	drawWall(new Coord(16, 9), 3, Direction.north);
+	drawWall(new Coord(17, 7), 3, Direction.east);
+	drawWall(new Coord(19, 6), 5, Direction.north);
+
+	console.log(walls);
 }
 
 function update() {
