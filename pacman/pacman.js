@@ -55,7 +55,7 @@ function drawWall(coord, length, direction) {
 
 	for(let i = 0; i < xSize / GRIDUNIT; i++) {
 		for(let j = 0; j < ySize / GRIDUNIT; j++) {
-			walls.push(new Coord(x + i, y + j));
+			walls.push(new Coord(coord.x + i, coord.y + j));
 		}
 	}
 
