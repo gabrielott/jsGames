@@ -4,6 +4,8 @@ const ctx = canvas.getContext("2d");
 const GRIDUNIT = 25;
 const MAP_WIDTH = 21;
 const MAP_HEIGHT = 23;
+const FPS = 60;
+const SPEED = 200;
 const Direction = Object.freeze({
 	"north": 1,
 	"south": 2,
@@ -38,6 +40,9 @@ class Character {
 	constructor(x, y, direction) {
 		this.position = new Coord(x, y);
 		this.direction = direction;
+		this.isMoving = false;
+		this.offsetX = 0;
+		this.offsetY = 0;
 	}
 
 	get x() {
@@ -57,31 +62,53 @@ class Character {
 	}
 
 	get pixelX() {
-		return this.position.pixelX;
-	}
-
-	set pixelX(x) {
-		this.position.pixelX = x;
+		return this.position.pixelX + this.offsetX;
 	}
 
 	get pixelY() {
-		return this.position.pixelY;
+		return this.position.pixelY + this.offsetY;
 	}
 
-	set pixelY(y) {
-		this.position.pixelY = y;
-	}
+	gridMove() {
+		let newY = this.y;
+		let newX = this.x;
 
-	move() {
 		switch(this.direction) {
 			case Direction.north:
-				this.y--; break;
+				newY--; break;
 			case Direction.south:
-				this.y++; break;
+				newY++; break;
 			case Direction.east:
-				this.x++; break;
+				newX++; break;
 			case Direction.west:
-				this.x--; break;
+				newX--; break;
+		}
+
+		this.offsetX = 0;
+		this.offsetY = 0;
+
+		if(walls.some(w => w.x === newX && w.y === newY)) {
+			this.isMoving = false;
+			return;
+		}
+
+		this.x = newX;
+		this.y = newY;
+		this.isMoving = true;
+	}
+
+	frameMove() {
+		if(!this.isMoving) return;
+		const pixelsPerFrame = GRIDUNIT / (SPEED / (1000 / FPS));
+		switch(this.direction) {
+			case Direction.north:
+				this.offsetY -= pixelsPerFrame; break;
+			case Direction.south:
+				this.offsetY += pixelsPerFrame; break;
+			case Direction.east:
+				this.offsetX += pixelsPerFrame; break;
+			case Direction.west:
+				this.offsetX -= pixelsPerFrame; break;
 		}
 	}
 }
@@ -137,19 +164,30 @@ document.addEventListener("keydown", (e) => {
 
 const walls = [];
 const pacman = new Character();
+let mouthOffset;
 let interval;
+let frames;
 
 function setup() {
 	pacman.direction = Direction.north;
 	pacman.x = 10;
 	pacman.y = 12;
+	pacman.mouthOffset = 0;
+	frames = SPEED;
 
 	draw();
-	interval = setInterval(update, 500);
+	interval = setInterval(update, 1000 / FPS);
 }
 
 function update() {
-	// pacman.move();
+	frames++;
+	if(1000 / FPS * frames / SPEED >= 1) {
+		frames = 0;
+		pacman.gridMove();
+	} else {
+		pacman.frameMove();
+	}
+
 	draw();
 }
 
