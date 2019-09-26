@@ -4,6 +4,7 @@ const ctx = canvas.getContext("2d");
 const GRIDUNIT = 25;
 const MAP_WIDTH = 21;
 const MAP_HEIGHT = 23;
+const MOUTH_OFFSET = 10;
 const FPS = 60;
 const SPEED = 200;
 const Direction = Object.freeze({
@@ -39,6 +40,7 @@ class Coord {
 class Character {
 	constructor(x, y, direction) {
 		this.position = new Coord(x, y);
+		this.previousPosition = new Coord(x, y);
 		this.direction = direction;
 		this.isMoving = false;
 		this.offsetX = 0;
@@ -62,43 +64,43 @@ class Character {
 	}
 
 	get pixelX() {
-		return this.position.pixelX + this.offsetX;
+		return this.position.pixelX;
 	}
 
 	get pixelY() {
-		return this.position.pixelY + this.offsetY;
+		return this.position.pixelY;
 	}
 
 	gridMove() {
-		let newY = this.y;
-		let newX = this.x;
+		const newPosition = new Coord(this.x, this.y);
 
 		switch(this.direction) {
 			case Direction.north:
-				newY--; break;
+				newPosition.y--; break;
 			case Direction.south:
-				newY++; break;
+				newPosition.y++; break;
 			case Direction.east:
-				newX++; break;
+				newPosition.x++; break;
 			case Direction.west:
-				newX--; break;
+				newPosition.x--; break;
+		}
+
+		if(map.some(w => w.x === newPosition.x && w.y === newPosition.y)) {
+			this.isMoving = false;
+			return;
 		}
 
 		this.offsetX = 0;
 		this.offsetY = 0;
 
-		if(map.some(w => w.x === newX && w.y === newY)) {
-			this.isMoving = false;
-			return;
-		}
-
-		this.x = newX;
-		this.y = newY;
+		this.previousPosition = this.position;
+		this.position = newPosition;
 		this.isMoving = true;
 	}
 
 	frameMove() {
 		if(!this.isMoving) return;
+
 		const pixelsPerFrame = GRIDUNIT / (SPEED / (1000 / FPS));
 		switch(this.direction) {
 			case Direction.north:
@@ -117,32 +119,31 @@ document.addEventListener("keydown", (e) => {
 	switch(e.key) {
 		case "ArrowUp":
 		case "w":
-			pacman.direction = Direction.north; break;
+			key = Direction.north; break;
 		case "ArrowRight":
 		case "d":
-			pacman.direction = Direction.east; break;
+			key = Direction.east; break;
 		case "ArrowLeft":
 		case "a":
-			pacman.direction = Direction.west; break;
+			key = Direction.west; break;
 		case "ArrowDown":
 		case "s":
-			pacman.direction = Direction.south; break;
+			key = Direction.south; break;
 		case "Enter":
 		case " ":
 			break;
 	}
 });
 
-const pacman = new Character();
-let mouthOffset;
+let pacman;
+let key;
 let interval;
 let frames;
 
 function setup() {
-	pacman.direction = Direction.north;
-	pacman.x = 10;
-	pacman.y = 12;
+	pacman = new Character(10, 12, Direction.north);
 	pacman.mouthOffset = 0;
+	key = Direction.north;
 	frames = SPEED;
 
 	draw();
@@ -153,6 +154,7 @@ function update() {
 	frames++;
 	if(1000 / FPS * frames / SPEED >= 1) {
 		frames = 0;
+		pacman.direction = key;
 		pacman.gridMove();
 	} else {
 		pacman.frameMove();
@@ -189,9 +191,9 @@ function draw() {
 	}
 
 	ctx.beginPath();
-	ctx.moveTo(pacman.pixelX + GRIDUNIT / 2, pacman.pixelY + GRIDUNIT / 2);
-	ctx.arc(pacman.pixelX + GRIDUNIT / 2, pacman.pixelY + GRIDUNIT / 2, GRIDUNIT / 2 - 1, initialAngle, endAngle);
-	ctx.lineTo(pacman.pixelX + GRIDUNIT / 2, pacman.pixelY + GRIDUNIT / 2);
+	ctx.moveTo(pacman.previousPosition.pixelX + pacman.offsetX + GRIDUNIT / 2, pacman.previousPosition.pixelY + pacman.offsetY + GRIDUNIT / 2);
+	ctx.arc(pacman.previousPosition.pixelX + pacman.offsetX + GRIDUNIT / 2, pacman.previousPosition.pixelY + pacman.offsetY + GRIDUNIT / 2, GRIDUNIT / 2 - 1, initialAngle, endAngle);
+	ctx.lineTo(pacman.previousPosition.pixelX + pacman.offsetX + GRIDUNIT / 2, pacman.previousPosition.pixelY + pacman.offsetY + GRIDUNIT / 2);
 	ctx.fillStyle = "yellow";
 	ctx.fill();
 }
