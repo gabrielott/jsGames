@@ -136,13 +136,16 @@ document.addEventListener("keydown", (e) => {
 });
 
 let pacman;
+let mouthOffset;
+let mouthGrowing;
 let key;
 let interval;
 let frames;
 
 function setup() {
 	pacman = new Character(10, 12, Direction.north);
-	pacman.mouthOffset = 0;
+	mouthOffset = 0;
+	mouthGrowing = true;
 	key = Direction.north;
 	frames = SPEED;
 
@@ -156,8 +159,10 @@ function update() {
 		frames = 0;
 		pacman.direction = key;
 		pacman.gridMove();
+		if(pacman.isMoving) mouthGrowing = !mouthGrowing;
 	} else {
 		pacman.frameMove();
+		if(pacman.isMoving) mouthOffset += (mouthGrowing ? -1 : 1) * (Math.PI / 4) / (SPEED / (1000 / FPS));
 	}
 
 	draw();
@@ -173,22 +178,25 @@ function draw() {
 
 	switch(pacman.direction) {
 		case Direction.north:
-			initialAngle = -1 * Math.PI / 4;
-			endAngle = 5 * Math.PI / 4;
+			initialAngle = 1.5 * Math.PI + Math.PI / 4;
+			endAngle = 1.5 * Math.PI - Math.PI / 4
 			break;
 		case Direction.south:
-			initialAngle = -5 * Math.PI / 4;
-			endAngle = 1 * Math.PI / 4;
+			initialAngle = 0.5 * Math.PI + Math.PI / 4;
+			endAngle = 0.5 * Math.PI - Math.PI / 4
 			break;
 		case Direction.east:
-			initialAngle = 1 * Math.PI / 4;
-			endAngle = 7 * Math.PI / 4;
+			initialAngle = Math.PI / 4;
+			endAngle = -Math.PI / 4
 			break;
 		case Direction.west:
-			initialAngle = -3 * Math.PI / 4;
-			endAngle = 3 * Math.PI / 4;
+			initialAngle = 1 * Math.PI + Math.PI / 4;
+			endAngle = 1 * Math.PI - Math.PI / 4
 			break;
 	}
+
+	initialAngle -= mouthOffset;
+	endAngle += mouthOffset;
 
 	ctx.beginPath();
 	ctx.moveTo(pacman.previousPosition.pixelX + pacman.offsetX + GRIDUNIT / 2, pacman.previousPosition.pixelY + pacman.offsetY + GRIDUNIT / 2);
