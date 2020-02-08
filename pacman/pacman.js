@@ -115,6 +115,49 @@ class Character {
 	}
 }
 
+class Pacman extends Character {
+	constructor(x, y, direction) {
+		super(x, y, direction);
+		this.mouthOffset = 0;
+		this.mouthGrowing = true;
+	}
+
+	draw() {
+		let initialAngle;
+		let endAngle;
+
+		switch(this.direction) {
+			case Direction.north:
+				initialAngle = 1.5 * Math.PI + Math.PI / 4;
+				endAngle = 1.5 * Math.PI - Math.PI / 4;
+				break;
+			case Direction.south:
+				initialAngle = 0.5 * Math.PI + Math.PI / 4;
+				endAngle = 0.5 * Math.PI - Math.PI / 4;
+				break;
+			case Direction.east:
+				initialAngle = Math.PI / 4;
+				endAngle = -Math.PI / 4;
+				break;
+			case Direction.west:
+				initialAngle = 1 * Math.PI + Math.PI / 4;
+				endAngle = 1 * Math.PI - Math.PI / 4;
+				break;
+		}
+
+
+		initialAngle -= this.mouthOffset;
+		endAngle += this.mouthOffset;
+
+		ctx.beginPath();
+		ctx.moveTo(this.previousPosition.pixelX + this.offsetX + GRIDUNIT / 2, this.previousPosition.pixelY + this.offsetY + GRIDUNIT / 2);
+		ctx.arc(this.previousPosition.pixelX + this.offsetX + GRIDUNIT / 2, this.previousPosition.pixelY + this.offsetY + GRIDUNIT / 2, GRIDUNIT / 2 - 1, initialAngle, endAngle);
+		ctx.lineTo(this.previousPosition.pixelX + this.offsetX + GRIDUNIT / 2, this.previousPosition.pixelY + this.offsetY + GRIDUNIT / 2);
+		ctx.fillStyle = "yellow";
+		ctx.fill();
+	}
+}
+
 document.addEventListener("keydown", (e) => {
 	switch(e.key) {
 		case "ArrowUp":
@@ -143,9 +186,7 @@ let interval;
 let frames;
 
 function setup() {
-	pacman = new Character(10, 12, Direction.north);
-	mouthOffset = 0;
-	mouthGrowing = true;
+	pacman = new Pacman(10, 12, Direction.north);
 	key = Direction.north;
 	frames = SPEED;
 
@@ -159,10 +200,10 @@ function update() {
 		frames = 0;
 		pacman.direction = key;
 		pacman.gridMove();
-		if(!pacman.isBlocked) mouthGrowing = !mouthGrowing;
+		if(!pacman.isBlocked) pacman.mouthGrowing = !pacman.mouthGrowing;
 	} else {
 		pacman.frameMove();
-		if(!pacman.isBlocked) mouthOffset += (mouthGrowing ? -1 : 1) * (Math.PI / 4) / (SPEED / (1000 / FPS));
+		if(!pacman.isBlocked) pacman.mouthOffset += (pacman.mouthGrowing ? -1 : 1) * (Math.PI / 4) / (SPEED / (1000 / FPS));
 	}
 
 	draw();
@@ -171,39 +212,7 @@ function update() {
 function draw() {
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 	drawMap();
-
-	// Pacman
-	let initialAngle;
-	let endAngle;
-
-	switch(pacman.direction) {
-		case Direction.north:
-			initialAngle = 1.5 * Math.PI + Math.PI / 4;
-			endAngle = 1.5 * Math.PI - Math.PI / 4
-			break;
-		case Direction.south:
-			initialAngle = 0.5 * Math.PI + Math.PI / 4;
-			endAngle = 0.5 * Math.PI - Math.PI / 4
-			break;
-		case Direction.east:
-			initialAngle = Math.PI / 4;
-			endAngle = -Math.PI / 4
-			break;
-		case Direction.west:
-			initialAngle = 1 * Math.PI + Math.PI / 4;
-			endAngle = 1 * Math.PI - Math.PI / 4
-			break;
-	}
-
-	initialAngle -= mouthOffset;
-	endAngle += mouthOffset;
-
-	ctx.beginPath();
-	ctx.moveTo(pacman.previousPosition.pixelX + pacman.offsetX + GRIDUNIT / 2, pacman.previousPosition.pixelY + pacman.offsetY + GRIDUNIT / 2);
-	ctx.arc(pacman.previousPosition.pixelX + pacman.offsetX + GRIDUNIT / 2, pacman.previousPosition.pixelY + pacman.offsetY + GRIDUNIT / 2, GRIDUNIT / 2 - 1, initialAngle, endAngle);
-	ctx.lineTo(pacman.previousPosition.pixelX + pacman.offsetX + GRIDUNIT / 2, pacman.previousPosition.pixelY + pacman.offsetY + GRIDUNIT / 2);
-	ctx.fillStyle = "yellow";
-	ctx.fill();
+	pacman.draw();
 }
 
 function drawMap() {
