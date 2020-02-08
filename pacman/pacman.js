@@ -42,7 +42,7 @@ class Character {
 		this.position = new Coord(x, y);
 		this.previousPosition = new Coord(x, y);
 		this.direction = direction;
-		this.isMoving = false;
+		this.isBlocked = false;
 		this.offsetX = 0;
 		this.offsetY = 0;
 	}
@@ -86,7 +86,7 @@ class Character {
 		}
 
 		if(map.some(w => w.x === newPosition.x && w.y === newPosition.y)) {
-			this.isMoving = false;
+			this.isBlocked = true;
 			return;
 		}
 
@@ -95,11 +95,11 @@ class Character {
 
 		this.previousPosition = this.position;
 		this.position = newPosition;
-		this.isMoving = true;
+		this.isBlocked = false;
 	}
 
 	frameMove() {
-		if(!this.isMoving) return;
+		if(this.isBlocked) return;
 
 		const pixelsPerFrame = GRIDUNIT / (SPEED / (1000 / FPS));
 		switch(this.direction) {
@@ -159,10 +159,10 @@ function update() {
 		frames = 0;
 		pacman.direction = key;
 		pacman.gridMove();
-		if(pacman.isMoving) mouthGrowing = !mouthGrowing;
+		if(!pacman.isBlocked) mouthGrowing = !mouthGrowing;
 	} else {
 		pacman.frameMove();
-		if(pacman.isMoving) mouthOffset += (mouthGrowing ? -1 : 1) * (Math.PI / 4) / (SPEED / (1000 / FPS));
+		if(!pacman.isBlocked) mouthOffset += (mouthGrowing ? -1 : 1) * (Math.PI / 4) / (SPEED / (1000 / FPS));
 	}
 
 	draw();
