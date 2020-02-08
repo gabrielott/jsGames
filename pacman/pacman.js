@@ -179,8 +179,6 @@ document.addEventListener("keydown", (e) => {
 });
 
 let pacman;
-let mouthOffset;
-let mouthGrowing;
 let key;
 let interval;
 let frames;
