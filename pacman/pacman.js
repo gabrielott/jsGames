@@ -63,27 +63,23 @@ class Character {
 		this.position.y = y;
 	}
 
-	get pixelX() {
-		return this.position.pixelX;
+	get curX() {
+		return this.previousPosition.pixelX + this.offsetX;
 	}
 
-	get pixelY() {
-		return this.position.pixelY;
+	get curY() {
+		return this.previousPosition.pixelY + this.offsetY;
 	}
 
 	gridMove() {
 		const newPosition = new Coord(this.x, this.y);
 
-		switch(this.direction) {
-			case Direction.north:
-				newPosition.y--; break;
-			case Direction.south:
-				newPosition.y++; break;
-			case Direction.east:
-				newPosition.x++; break;
-			case Direction.west:
-				newPosition.x--; break;
-		}
+		this.doByDirection(
+			() => newPosition.y--,
+			() => newPosition.y++,
+			() => newPosition.x++,
+			() => newPosition.x--);
+
 
 		if(map.some(w => w.x === newPosition.x && w.y === newPosition.y)) {
 			this.isBlocked = true;
@@ -102,16 +98,26 @@ class Character {
 		if(this.isBlocked) return;
 
 		const pixelsPerFrame = GRIDUNIT / (SPEED / (1000 / FPS));
+
+		this.doByDirection(
+			() => this.offsetY -= pixelsPerFrame,
+			() => this.offsetY += pixelsPerFrame,
+			() => this.offsetX += pixelsPerFrame,
+			() => this.offsetX -= pixelsPerFrame);
+	}
+
+	doByDirection(north, south, east, west) {
 		switch(this.direction) {
 			case Direction.north:
-				this.offsetY -= pixelsPerFrame; break;
+				north(); break;
 			case Direction.south:
-				this.offsetY += pixelsPerFrame; break;
+				south(); break;
 			case Direction.east:
-				this.offsetX += pixelsPerFrame; break;
+				east(); break;
 			case Direction.west:
-				this.offsetX -= pixelsPerFrame; break;
+				west(); break;
 		}
+
 	}
 }
 
@@ -126,34 +132,87 @@ class Pacman extends Character {
 		let initialAngle;
 		let endAngle;
 
-		switch(this.direction) {
-			case Direction.north:
+		this.doByDirection(
+			() => {
 				initialAngle = 1.5 * Math.PI + Math.PI / 4;
 				endAngle = 1.5 * Math.PI - Math.PI / 4;
-				break;
-			case Direction.south:
+			}, () => {
 				initialAngle = 0.5 * Math.PI + Math.PI / 4;
 				endAngle = 0.5 * Math.PI - Math.PI / 4;
-				break;
-			case Direction.east:
+			}, () => {
 				initialAngle = Math.PI / 4;
 				endAngle = -Math.PI / 4;
-				break;
-			case Direction.west:
+			}, () => {
 				initialAngle = 1 * Math.PI + Math.PI / 4;
 				endAngle = 1 * Math.PI - Math.PI / 4;
-				break;
-		}
-
+			});
 
 		initialAngle -= this.mouthOffset;
 		endAngle += this.mouthOffset;
 
 		ctx.beginPath();
-		ctx.moveTo(this.previousPosition.pixelX + this.offsetX + GRIDUNIT / 2, this.previousPosition.pixelY + this.offsetY + GRIDUNIT / 2);
-		ctx.arc(this.previousPosition.pixelX + this.offsetX + GRIDUNIT / 2, this.previousPosition.pixelY + this.offsetY + GRIDUNIT / 2, GRIDUNIT / 2 - 1, initialAngle, endAngle);
-		ctx.lineTo(this.previousPosition.pixelX + this.offsetX + GRIDUNIT / 2, this.previousPosition.pixelY + this.offsetY + GRIDUNIT / 2);
+		ctx.moveTo(this.curX + GRIDUNIT / 2, this.curY + GRIDUNIT / 2);
+		ctx.arc(this.curX + GRIDUNIT / 2, this.curY + GRIDUNIT / 2, GRIDUNIT / 2 - 1, initialAngle, endAngle);
+		ctx.lineTo(this.curX + GRIDUNIT / 2, this.curY + GRIDUNIT / 2);
 		ctx.fillStyle = "yellow";
+		ctx.fill();
+	}
+}
+
+class Ghost extends Character {
+	constructor(x, y, direction, color) {
+		super(x, y, direction)
+		this.color = color;
+	}
+
+	draw() {
+		// Upper body
+		ctx.beginPath();
+		ctx.fillStyle = this.color;
+
+		ctx.moveTo(this.curX + 1, this.curY + GRIDUNIT);
+		ctx.lineTo(this.curX + 1, this.curY + GRIDUNIT / 2);
+		ctx.arc(this.curX + GRIDUNIT / 2, this.curY + GRIDUNIT / 2, GRIDUNIT / 2 - 1, Math.PI, 0);
+		ctx.lineTo(this.curX + GRIDUNIT - 1, this.curY + GRIDUNIT);
+		
+		// Legs
+		for(let i = 5; i >= 0; i--) {
+			const x = (this.curX + 1) + (GRIDUNIT - 2) * i/6;
+			const y = i % 2 == 0 ? this.curY + GRIDUNIT : this.curY + GRIDUNIT * 3/4;
+			ctx.lineTo(x, y);
+		}
+
+		ctx.fill();
+
+		// Outer eyes
+		ctx.beginPath();
+		ctx.fillStyle = "white";
+
+		const eyeX = this.curX + GRIDUNIT / 4 + 1;
+		const eyeY = this.curY + GRIDUNIT / 2 - 2;
+		ctx.ellipse(eyeX, eyeY, 4, 5, 0, 0, 2 * Math.PI);
+		ctx.ellipse(this.curX + GRIDUNIT - (GRIDUNIT / 4 + 1), eyeY, 4, 5, 0, 0, 2 * Math.PI);
+
+		ctx.fill();
+
+		// Inner eyes
+		ctx.beginPath();
+		ctx.fillStyle = "black";
+
+		let lookX = 0;
+		let lookY = 0;
+
+		this.doByDirection(
+			() => lookY = -2.5,
+			() => lookY = +2.5,
+			() => lookX = +1.5,
+			() => lookX = -1.5);
+
+		const inEyeX = eyeX + lookX;
+		const inEyeY = eyeY + lookY;
+		ctx.arc(inEyeX, inEyeY, GRIDUNIT / 12, 0, 2 * Math.PI);
+		ctx.arc(this.curX + GRIDUNIT + lookX - (GRIDUNIT / 4 + 1), inEyeY, GRIDUNIT / 12, 0, 2 * Math.PI);
+
 		ctx.fill();
 	}
 }
@@ -179,14 +238,17 @@ document.addEventListener("keydown", (e) => {
 });
 
 let pacman;
+let ghost;
 let key;
 let interval;
 let frames;
 
 function setup() {
 	pacman = new Pacman(10, 12, Direction.north);
-	key = Direction.north;
+	key = Direction.west;
 	frames = SPEED;
+
+	ghost = new Ghost(1, 2, Direction.west, "red");
 
 	draw();
 	interval = setInterval(update, 1000 / FPS);
@@ -211,6 +273,7 @@ function draw() {
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 	drawMap();
 	pacman.draw();
+	ghost.draw();
 }
 
 function drawMap() {
