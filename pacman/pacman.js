@@ -43,12 +43,16 @@ class Coord {
 	}
 
 	adjacentCoord(direction) {
+		return this.coordByOffset(direction, 1);
+	}
+
+	coordByOffset(direction, offset) {
 		return Coord.doByDirection(
 			direction,
-			() => new Coord(this.x, this.y - 1),
-			() => new Coord(this.x, this.y + 1),
-			() => new Coord(this.x + 1, this.y),
-			() => new Coord(this.x - 1, this.y)
+			() => new Coord(this.x, this.y - offset),
+			() => new Coord(this.x, this.y + offset),
+			() => new Coord(this.x + offset, this.y),
+			() => new Coord(this.x - offset, this.y)
 		);
 	}
 
@@ -78,6 +82,11 @@ class Coord {
 			() => Direction.west,
 			() => Direction.east
 		);
+	}
+
+	static distance(coord1, coord2) {
+		return Math.sqrt(Math.pow(coord1.x - coord2.x, 2) + Math.pow(coord1.y - coord2.y, 2));
+		
 	}
 }
 
@@ -190,9 +199,8 @@ class Pacman extends Character {
 }
 
 class Behavior {
-	constructor(scatterTarget, frightnedTarget, chaseTargetFunction, speed) {
+	constructor(scatterTarget, chaseTargetFunction, speed) {
 		this.scatterTarget = scatterTarget;
-		this.frightnedTarget = frightnedTarget;
 		this.chaseTargetFunction = chaseTargetFunction;
 		this.speed = speed;
 	}
@@ -212,7 +220,7 @@ class Ghost extends Character {
 			case Mode.scatter:
 				return this.behavior.scatterTarget;
 			case Mode.frightened:
-				return this.behavior.frightnedTarget;
+				return null;
 			case Mode.chase:
 				return this.behavior.chaseTargetFunction();
 		}
@@ -273,6 +281,16 @@ class Ghost extends Character {
 	}
 
 	determineDirection() {
+		if(this.mode === Mode.frightened) {
+			let newDirection;
+			do {
+				newDirection = Math.floor(Math.random() * (4 - 1 + 1)) + 1;
+			} while(newDirection === Coord.opposite(this.direction) || this.position.adjacentCoord(newDirection).isWall);
+
+			this.direction = newDirection;
+			return;
+		}
+
 		const paths = {
 			1: this.position.adjacentCoord(Direction.north),
 			2: this.position.adjacentCoord(Direction.south),
@@ -288,12 +306,7 @@ class Ghost extends Character {
 		let best = null;
 		let direction = null;
 		validDirections.forEach(k => {
-			const tarX = this.target.x;
-			const tarY = this.target.y;
-			const nexX = paths[k].x;
-			const nexY = paths[k].y;
-			
-			const distance = Math.sqrt(Math.pow(tarX - nexX, 2) + Math.pow(tarY - nexY, 2));
+			const distance = Coord.distance(this.target, paths[k]);
 
 			if(best > distance || best === null) {
 				best = distance;
@@ -326,7 +339,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 let pacman;
-let blinky;
+let ghosts;
 let key;
 let interval;
 let frames;
@@ -336,8 +349,28 @@ function setup() {
 	key = Direction.north;
 	frames = SPEED;
 
-	blinkBeh = new Behavior(new Coord(MAP_WIDTH - 2, 0));
-	blinky = new Ghost(10, 8, Direction.west, "red", blinkBeh);
+	const oikakeChaseFunc = () => pacman.position;
+	const oikakeBehavior = new Behavior(new Coord(MAP_WIDTH - 2, 0), oikakeChaseFunc);
+	const oikake = new Ghost(10, 8, Direction.west, "red", oikakeBehavior);
+
+	const machibuseChaseFunc = () => pacman.position.coordByOffset(pacman.direction, 4);
+	const machibuseBehavior = new Behavior(new Coord(2, 0), machibuseChaseFunc);
+	const machibuse = new Ghost(10, 8, Direction.west, "pink", machibuseBehavior);
+
+	const kimagureChaseFunc = () => {
+		const pacOffset = pacman.position.coordByOffset(pacman.direction, 2);
+		const diffX = pacOffset.x - oikake.x;
+		const diffY = pacOffset.y - oikake.y;
+		return new Coord(oikake.x + 2 * diffX, oikake.y + 2 * diffY);
+	};
+	const kimagureBehavior = new Behavior(new Coord(MAP_WIDTH, MAP_HEIGHT), kimagureChaseFunc);
+	const kimagure = new Ghost(10, 8, Direction.west, "cyan", kimagureBehavior);
+
+	const otobokeChaseFunc = () => Coord.distance(otoboke.position, pacman.position) > 8 ? oikakeChaseFunc() : new Coord(0, MAP_HEIGHT);
+	const otobokeBehavior = new Behavior(new Coord(0, MAP_HEIGHT), otobokeChaseFunc);
+	const otoboke = new Ghost(10, 8, Direction.west, "orange", otobokeBehavior);
+
+	ghosts = [oikake, machibuse, kimagure, otoboke];
 
 	draw();
 	interval = setInterval(update, 1000 / FPS);
@@ -347,15 +380,24 @@ function update() {
 	frames++;
 	if(1000 / FPS * frames / SPEED >= 1) {
 		frames = 0;
+
+		// Pacman
 		pacman.direction = key;
-		blinky.determineDirection();
 		pacman.gridMove();
-		blinky.gridMove();
 		if(!pacman.isBlocked) pacman.mouthGrowing = !pacman.mouthGrowing;
+
+		// Ghosts
+		ghosts.forEach(g => {
+			g.determineDirection();
+			g.gridMove();
+		});
 	} else {
+		// Pacman
 		pacman.frameMove();
 		if(!pacman.isBlocked) pacman.mouthOffset += (pacman.mouthGrowing ? -1 : 1) * (Math.PI / 4) / (SPEED / (1000 / FPS));
-		blinky.frameMove();
+
+		// Ghosts
+		ghosts.forEach(g => g.frameMove());
 	}
 
 	draw();
@@ -365,7 +407,7 @@ function draw() {
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 	drawMap();
 	pacman.draw();
-	blinky.draw();
+	ghosts.forEach(g => g.draw());
 }
 
 function drawMap() {
