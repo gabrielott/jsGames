@@ -7,6 +7,7 @@ const MAP_HEIGHT = 23;
 const MOUTH_OFFSET = 10;
 const FPS = 60;
 const SPEED = 200;
+const NO_UP_TILES = [{x: 9, y: 8}, {x: 11, y: 8}, {x: 9, y: 16}, {x: 11, y: 16}];
 const Direction = Object.freeze({
 	"north": 1,
 	"south": 2,
@@ -301,6 +302,13 @@ class Ghost extends Character {
 		const back = this.position.adjacentCoord(Coord.opposite(this.direction));
 		const validDirections = Object.keys(paths).filter(k => !paths[k].isWall && !paths[k].equals(back));
 
+		if(NO_UP_TILES.some(t => this.position.equals(t))) {
+			const index = validDirections.indexOf("1");
+			if(index != -1) {
+				validDirections.splice(index, 1);
+			}
+		}
+
 		if(validDirections.length === 0) return;
 
 		let best = null;
@@ -350,7 +358,7 @@ function setup() {
 	frames = SPEED;
 
 	const oikakeChaseFunc = () => pacman.position;
-	const oikakeBehavior = new Behavior(new Coord(MAP_WIDTH - 2, 0), oikakeChaseFunc);
+	const oikakeBehavior = new Behavior(new Coord(MAP_WIDTH - 3, 0), oikakeChaseFunc);
 	const oikake = new Ghost(10, 8, Direction.west, "red", oikakeBehavior);
 
 	const machibuseChaseFunc = () => pacman.position.coordByOffset(pacman.direction, 4);
@@ -363,14 +371,15 @@ function setup() {
 		const diffY = pacOffset.y - oikake.y;
 		return new Coord(oikake.x + 2 * diffX, oikake.y + 2 * diffY);
 	};
-	const kimagureBehavior = new Behavior(new Coord(MAP_WIDTH, MAP_HEIGHT), kimagureChaseFunc);
+	const kimagureBehavior = new Behavior(new Coord(MAP_WIDTH - 1, MAP_HEIGHT - 1), kimagureChaseFunc);
 	const kimagure = new Ghost(10, 8, Direction.west, "cyan", kimagureBehavior);
 
-	const otobokeChaseFunc = () => Coord.distance(otoboke.position, pacman.position) > 8 ? oikakeChaseFunc() : new Coord(0, MAP_HEIGHT);
-	const otobokeBehavior = new Behavior(new Coord(0, MAP_HEIGHT), otobokeChaseFunc);
+	const otobokeChaseFunc = () => Coord.distance(otoboke.position, pacman.position) > 8 ? oikakeChaseFunc() : new Coord(0, MAP_HEIGHT - 1);
+	const otobokeBehavior = new Behavior(new Coord(0, MAP_HEIGHT - 1), otobokeChaseFunc);
 	const otoboke = new Ghost(10, 8, Direction.west, "orange", otobokeBehavior);
 
 	ghosts = [oikake, machibuse, kimagure, otoboke];
+	ghosts.forEach(g => g.mode = Mode.chase);
 
 	draw();
 	interval = setInterval(update, 1000 / FPS);
@@ -408,6 +417,15 @@ function draw() {
 	drawMap();
 	pacman.draw();
 	ghosts.forEach(g => g.draw());
+
+	// Draw targets
+	// ghosts.forEach(g => {
+	// 	if(g.mode === Mode.frightened) return;
+	// 	ctx.beginPath();
+	// 	ctx.arc(g.target.pixelX + GRIDUNIT / 2, g.target.pixelY + GRIDUNIT / 2, GRIDUNIT / 4, 0, 2 * Math.PI)
+	// 	ctx.fillStyle = g.color;
+	// 	ctx.fill()
+	// });
 }
 
 function drawMap() {
