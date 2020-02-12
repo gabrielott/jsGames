@@ -14,12 +14,43 @@ const GHOST_DOT_AMOUNTS = [
 	{kimagure: 0,  otoboke: 50}, // Second level
 	{kimagure: 0,  otoboke: 0}   // Third level and beyond
 ];
+const map = [
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1,
+	1, 2, 4, 4, 4, 4, 4, 4, 4, 4, 2, 4, 4, 4, 4, 4, 4, 4, 4, 2, 1,
+	1, 2, 4, 2, 2, 4, 2, 2, 2, 4, 2, 4, 2, 2, 2, 4, 2, 2, 4, 2, 1,
+	1, 2, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 1,
+	1, 2, 4, 2, 2, 4, 2, 4, 2, 2, 2, 2, 2, 4, 2, 4, 2, 2, 4, 2, 1,
+	1, 2, 4, 4, 4, 4, 2, 4, 4, 4, 2, 4, 4, 4, 2, 4, 4, 4, 4, 2, 1,
+	1, 2, 2, 2, 2, 4, 2, 2, 2, 4, 2, 4, 2, 2, 2, 4, 2, 2, 2, 2, 1,
+	1, 1, 1, 1, 2, 4, 2, 4, 4, 4, 4, 4, 4, 4, 2, 4, 2, 1, 1, 1, 1,
+	2, 2, 2, 2, 2, 4, 2, 4, 2, 2, 2, 2, 2, 4, 2, 4, 2, 2, 2, 2, 2,
+	4, 4, 4, 4, 4, 4, 4, 4, 2, 3, 3, 3, 2, 4, 4, 4, 4, 4, 4, 4, 4,
+	2, 2, 2, 2, 2, 4, 2, 4, 2, 2, 2, 2, 2, 4, 2, 4, 2, 2, 2, 2, 2,
+	1, 1, 1, 1, 2, 4, 2, 4, 4, 4, 4, 4, 4, 4, 2, 4, 2, 1, 1, 1, 1,
+	1, 2, 2, 2, 2, 4, 2, 4, 2, 2, 2, 2, 2, 4, 2, 4, 2, 2, 2, 2, 1,
+	1, 2, 4, 4, 4, 4, 4, 4, 4, 4, 2, 4, 4, 4, 4, 4, 4, 4, 4, 2, 1,
+	1, 2, 4, 2, 2, 4, 2, 2, 2, 4, 2, 4, 2, 2, 2, 4, 2, 2, 4, 2, 1,
+	1, 2, 4, 4, 2, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 4, 4, 2, 1,
+	1, 2, 2, 4, 2, 4, 2, 4, 2, 2, 2, 2, 2, 4, 2, 4, 2, 4, 2, 2, 1,
+	1, 2, 4, 4, 4, 4, 2, 4, 4, 4, 2, 4, 4, 4, 2, 4, 4, 4, 4, 2, 1,
+	1, 2, 4, 2, 2, 2, 2, 2, 2, 4, 2, 4, 2, 2, 2, 2, 2, 2, 4, 2, 1,
+	1, 2, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 1,
+	1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1,
+	1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+];
 
 const Direction = Object.freeze({
 	"north": 1,
 	"south": 2,
 	"east" : 3,
 	"west" : 4
+});
+const PartType = Object.freeze({
+	"outOfBounds" : 1,
+	"wall"        : 2,
+	"empty"       : 3,
+	"dot"         : 4
 });
 const Mode = Object.freeze({
 	"scatter"   : 1,
@@ -43,7 +74,7 @@ class Coord {
 	}
 
 	get isWall() {
-		return map.some(w => this.equals(w));
+		return typeOnMap(this) === PartType.wall;
 	}
 
 	toPixels() {
@@ -95,6 +126,14 @@ class Coord {
 	static distance(coord1, coord2) {
 		return Math.sqrt(Math.pow(coord1.x - coord2.x, 2) + Math.pow(coord1.y - coord2.y, 2));
 		
+	}
+}
+
+class MapPart {
+	constructor(x, y, type) {
+		this.x = x;
+		this.y = y;
+		this.type = type;
 	}
 }
 
@@ -476,7 +515,33 @@ function update() {
 
 function draw() {
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
-	drawMap();
+
+
+	for(let i = 0; i < MAP_WIDTH * MAP_HEIGHT; i++) {
+		if(map[i] === PartType.empty || map[i] === PartType.outOfBounds) continue;
+
+		ctx.beginPath();
+
+		const y = Math.floor(i / MAP_WIDTH);
+		const x = i - y * MAP_WIDTH;
+		const coord = new Coord(x, y);
+
+		if(map[i] === PartType.wall) {
+			ctx.fillStyle = "black";
+			ctx.rect(coord.pixelX, coord.pixelY, GRIDUNIT, GRIDUNIT);
+			ctx.fill();
+			continue;
+		}
+
+		if(map[i] === PartType.dot) {
+			ctx.fillStyle = "white";
+			ctx.arc(coord.pixelX + GRIDUNIT / 2, coord.pixelY + GRIDUNIT / 2, GRIDUNIT / 8, 0, 2 * Math.PI);
+			ctx.fill();
+			continue;
+		}
+	}
+
+
 	pacman.draw();
 	ghosts.forEach(g => g.draw());
 
@@ -490,14 +555,9 @@ function draw() {
 	// });
 }
 
-function drawMap() {
-	ctx.fillStyle = "black";
-
-	map.forEach(w => {
-		ctx.beginPath();
-		ctx.rect(w.x * GRIDUNIT, w.y * GRIDUNIT, GRIDUNIT, GRIDUNIT);
-		ctx.fill();
-	});
+function typeOnMap(coord) {
+	const index = coord.y * MAP_WIDTH + coord.x;
+	return map[index];
 }
 
 setup();
