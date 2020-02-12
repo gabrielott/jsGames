@@ -8,6 +8,13 @@ const MOUTH_OFFSET = 10;
 const FPS = 60;
 const SPEED = 200;
 const NO_UP_TILES = [{x: 9, y: 8}, {x: 11, y: 8}, {x: 9, y: 16}, {x: 11, y: 16}];
+const HOUSE_CENTER = {x: 10, y: 10};
+const GHOST_DOT_AMOUNTS = [
+	{kimagure: 30, otoboke: 60}, // First level
+	{kimagure: 0,  otoboke: 50}, // Second level
+	{kimagure: 0,  otoboke: 0}   // Third level and beyond
+];
+
 const Direction = Object.freeze({
 	"north": 1,
 	"south": 2,
@@ -20,7 +27,6 @@ const Mode = Object.freeze({
 	"frightened": 3,
 	"inHouse"   : 4
 });
-
 
 class Coord {
 	constructor(x, y) {
@@ -203,8 +209,9 @@ class Behavior {
 
 
 class Ghost extends Character {
-	constructor(x, y, direction, color, behavior) {
-		super(x, y, direction)
+	constructor(name, x, y, direction, color, behavior) {
+		super(x, y, direction);
+		this.name = name;
 		this.color = color;
 		this.mode = Mode.inHouse;
 		this.behavior = behavior;
@@ -224,7 +231,6 @@ class Ghost extends Character {
 				return null;
 		}
 	}
-
 
 	draw() {
 		// Upper body
@@ -304,38 +310,49 @@ let pacman;
 let ghosts;
 let key;
 let interval;
+let level;
 let frames;
 
 function setup() {
 	pacman = new Pacman(10, 12, Direction.north);
 	key = Direction.north;
+	level = 1;
 	frames = SPEED;
 
-	const oikakeChaseFunc = () => pacman.position;
-	const oikakeBehavior = new Behavior(new Coord(MAP_WIDTH - 3, 0), oikakeChaseFunc);
-	const oikake = new Ghost(10, 8, Direction.west, "red", oikakeBehavior);
-	oikake.mode = Mode.chase;
-	oikake.dots = 10;
-
+	// Chase functions
+	const oikakeChaseFunc =    () => pacman.position;
 	const machibuseChaseFunc = () => pacman.position.coordByOffset(pacman.direction, 4);
-	const machibuseBehavior = new Behavior(new Coord(2, 0), machibuseChaseFunc);
-	const machibuse = new Ghost(10, 10, Direction.north, "pink", machibuseBehavior);
-	machibuse.dots = 9;
-
-	const kimagureChaseFunc = () => {
+	const kimagureChaseFunc =  () => {
 		const pacOffset = pacman.position.coordByOffset(pacman.direction, 2);
 		const diffX = pacOffset.x - oikake.x;
 		const diffY = pacOffset.y - oikake.y;
 		return new Coord(oikake.x + 2 * diffX, oikake.y + 2 * diffY);
 	};
-	const kimagureBehavior = new Behavior(new Coord(MAP_WIDTH - 1, MAP_HEIGHT - 1), kimagureChaseFunc);
-	const kimagure = new Ghost(9, 10, Direction.north, "cyan", kimagureBehavior);
-	kimagure.dots = 10;
+	const otobokeChaseFunc =   () => Coord.distance(otoboke.position, pacman.position) >= 8 ? oikakeChaseFunc() : new Coord(0, MAP_HEIGHT - 1);
 
-	const otobokeChaseFunc = () => Coord.distance(otoboke.position, pacman.position) > 8 ? oikakeChaseFunc() : new Coord(0, MAP_HEIGHT - 1);
-	const otobokeBehavior = new Behavior(new Coord(0, MAP_HEIGHT - 1), otobokeChaseFunc);
-	const otoboke = new Ghost(11, 10, Direction.north, "orange", otobokeBehavior);
-	otoboke.dots = 9;
+	// Behaviors
+	const oikakeBehavior    = new Behavior(new Coord(MAP_WIDTH - 3, 0), oikakeChaseFunc);
+	const machibuseBehavior = new Behavior(new Coord(2, 0), machibuseChaseFunc);
+	const kimagureBehavior  = new Behavior(new Coord(MAP_WIDTH - 1, MAP_HEIGHT - 1), kimagureChaseFunc);
+	const otobokeBehavior   = new Behavior(new Coord(0, MAP_HEIGHT - 1), otobokeChaseFunc);
+
+	// Ghosts
+	const oikake    = new Ghost("oikake", 10, 8, Direction.west, "red", oikakeBehavior);
+	const machibuse = new Ghost("machibuse", 10, 10, Direction.north, "pink", machibuseBehavior);
+	const kimagure  = new Ghost("kimagure", 9, 10, Direction.north, "cyan", kimagureBehavior);
+	const otoboke   = new Ghost("otoboke", 11, 10, Direction.north, "orange", otobokeBehavior);
+
+	// Fixed dot amounts
+	oikake.dots = 0;
+	machibuse.dots = 0;
+
+	// Dynamic dot amounts
+	const dotObject = level < 3 ? GHOST_DOT_AMOUNTS[level - 1] : GHOST_DOT_AMOUNTS[2];
+	kimagure.dots = dotObject[kimagure.name];
+	otoboke.dots  = dotObject[otoboke.name];
+
+	// Fixed mode
+	oikake.mode = Mode.chase;
 
 	ghosts = [oikake, machibuse, kimagure, otoboke];
 
@@ -362,18 +379,18 @@ function update() {
 		ghosts.forEach(g => {
 			// inHouse mode
 			if(g.mode === Mode.inHouse) {
-				if(g.dots < 10) return;
+				if(g.dots > 0) return;
 
 				g.offsetX = 0;
 				g.offsetY = 0;
 
 				switch(g.x) {
-					case 9:
+					case HOUSE_CENTER.x - 1:
 						g.direction = Direction.east; break;
-					case 11:
+					case HOUSE_CENTER.x + 1:
 						g.direction = Direction.west; break;
-					case 10:
-						if(g.y === 8) {
+					case HOUSE_CENTER.x:
+						if(g.y === HOUSE_CENTER.y - 2) {
 							g.direction = Direction.west;
 							g.mode = Mode.chase;
 							break;
@@ -441,7 +458,7 @@ function update() {
 
 		// Ghosts
 		ghosts.forEach(g => {
-			if(g.dots < 10) {
+			if(g.dots > 0) {
 				if(g.bouncingDirection === Direction.north) {
 					if(--g.offsetY === -3) g.bouncingDirection = Direction.south;
 				} else {
@@ -482,6 +499,5 @@ function drawMap() {
 		ctx.fill();
 	});
 }
-
 
 setup();
