@@ -17,7 +17,8 @@ const Direction = Object.freeze({
 const Mode = Object.freeze({
 	"scatter"   : 1,
 	"chase"     : 2,
-	"frightened": 3
+	"frightened": 3,
+	"inHouse"   : 4
 });
 
 
@@ -96,7 +97,6 @@ class Character {
 		this.position = new Coord(x, y);
 		this.previousPosition = new Coord(x, y);
 		this.direction = direction;
-		this.isBlocked = false;
 		this.offsetX = 0;
 		this.offsetY = 0;
 	}
@@ -130,11 +130,6 @@ class Character {
 	}
 
 	gridMove() {
-		if(this.nextPosition.isWall) {
-			this.isBlocked = true;
-			return;
-		}
-
 		this.offsetX = 0;
 		this.offsetY = 0;
 
@@ -144,8 +139,6 @@ class Character {
 	}
 
 	frameMove() {
-		if(this.isBlocked) return;
-
 		const pixelsPerFrame = GRIDUNIT / (SPEED / (1000 / FPS));
 
 		Coord.doByDirection(
@@ -162,6 +155,7 @@ class Character {
 class Pacman extends Character {
 	constructor(x, y, direction) {
 		super(x, y, direction);
+		this.isBlocked = false;
 		this.mouthOffset = 0;
 		this.mouthGrowing = true;
 	}
@@ -212,18 +206,22 @@ class Ghost extends Character {
 	constructor(x, y, direction, color, behavior) {
 		super(x, y, direction)
 		this.color = color;
-		this.mode = Mode.scatter;
+		this.mode = Mode.inHouse;
 		this.behavior = behavior;
+		this.housePosition = new Coord(x, y);
+		this.bouncingDirection = Direction.north;
+		this.dots = 0;
 	}
 
 	get target() {
 		switch(this.mode) {
 			case Mode.scatter:
 				return this.behavior.scatterTarget;
-			case Mode.frightened:
-				return null;
 			case Mode.chase:
 				return this.behavior.chaseTargetFunction();
+			case Mode.frightened:
+			case Mode.inHouse:
+				return null;
 		}
 	}
 
@@ -280,50 +278,6 @@ class Ghost extends Character {
 
 		ctx.fill();
 	}
-
-	determineDirection() {
-		if(this.mode === Mode.frightened) {
-			let newDirection;
-			do {
-				newDirection = Math.floor(Math.random() * (4 - 1 + 1)) + 1;
-			} while(newDirection === Coord.opposite(this.direction) || this.position.adjacentCoord(newDirection).isWall);
-
-			this.direction = newDirection;
-			return;
-		}
-
-		const paths = {
-			1: this.position.adjacentCoord(Direction.north),
-			2: this.position.adjacentCoord(Direction.south),
-			3: this.position.adjacentCoord(Direction.east),
-			4: this.position.adjacentCoord(Direction.west)
-		};
-
-		const back = this.position.adjacentCoord(Coord.opposite(this.direction));
-		const validDirections = Object.keys(paths).filter(k => !paths[k].isWall && !paths[k].equals(back));
-
-		if(NO_UP_TILES.some(t => this.position.equals(t))) {
-			const index = validDirections.indexOf("1");
-			if(index != -1) {
-				validDirections.splice(index, 1);
-			}
-		}
-
-		if(validDirections.length === 0) return;
-
-		let best = null;
-		let direction = null;
-		validDirections.forEach(k => {
-			const distance = Coord.distance(this.target, paths[k]);
-
-			if(best > distance || best === null) {
-				best = distance;
-				direction = k;
-			}
-		});
-
-		this.direction = parseInt(direction);
-	}
 }
 
 document.addEventListener("keydown", (e) => {
@@ -360,10 +314,13 @@ function setup() {
 	const oikakeChaseFunc = () => pacman.position;
 	const oikakeBehavior = new Behavior(new Coord(MAP_WIDTH - 3, 0), oikakeChaseFunc);
 	const oikake = new Ghost(10, 8, Direction.west, "red", oikakeBehavior);
+	oikake.mode = Mode.chase;
+	oikake.dots = 10;
 
 	const machibuseChaseFunc = () => pacman.position.coordByOffset(pacman.direction, 4);
 	const machibuseBehavior = new Behavior(new Coord(2, 0), machibuseChaseFunc);
-	const machibuse = new Ghost(10, 8, Direction.west, "pink", machibuseBehavior);
+	const machibuse = new Ghost(10, 10, Direction.north, "pink", machibuseBehavior);
+	machibuse.dots = 9;
 
 	const kimagureChaseFunc = () => {
 		const pacOffset = pacman.position.coordByOffset(pacman.direction, 2);
@@ -372,14 +329,15 @@ function setup() {
 		return new Coord(oikake.x + 2 * diffX, oikake.y + 2 * diffY);
 	};
 	const kimagureBehavior = new Behavior(new Coord(MAP_WIDTH - 1, MAP_HEIGHT - 1), kimagureChaseFunc);
-	const kimagure = new Ghost(10, 8, Direction.west, "cyan", kimagureBehavior);
+	const kimagure = new Ghost(9, 10, Direction.north, "cyan", kimagureBehavior);
+	kimagure.dots = 10;
 
 	const otobokeChaseFunc = () => Coord.distance(otoboke.position, pacman.position) > 8 ? oikakeChaseFunc() : new Coord(0, MAP_HEIGHT - 1);
 	const otobokeBehavior = new Behavior(new Coord(0, MAP_HEIGHT - 1), otobokeChaseFunc);
-	const otoboke = new Ghost(10, 8, Direction.west, "orange", otobokeBehavior);
+	const otoboke = new Ghost(11, 10, Direction.north, "orange", otobokeBehavior);
+	otoboke.dots = 9;
 
 	ghosts = [oikake, machibuse, kimagure, otoboke];
-	ghosts.forEach(g => g.mode = Mode.chase);
 
 	draw();
 	interval = setInterval(update, 1000 / FPS);
@@ -387,26 +345,113 @@ function setup() {
 
 function update() {
 	frames++;
+
 	if(1000 / FPS * frames / SPEED >= 1) {
 		frames = 0;
 
 		// Pacman
 		pacman.direction = key;
-		pacman.gridMove();
-		if(!pacman.isBlocked) pacman.mouthGrowing = !pacman.mouthGrowing;
+		pacman.isBlocked = pacman.nextPosition.isWall;
+
+		if(!pacman.isBlocked) {
+			pacman.gridMove();
+			pacman.mouthGrowing = !pacman.mouthGrowing;
+		}
 
 		// Ghosts
 		ghosts.forEach(g => {
-			g.determineDirection();
+			// inHouse mode
+			if(g.mode === Mode.inHouse) {
+				if(g.dots < 10) return;
+
+				g.offsetX = 0;
+				g.offsetY = 0;
+
+				switch(g.x) {
+					case 9:
+						g.direction = Direction.east; break;
+					case 11:
+						g.direction = Direction.west; break;
+					case 10:
+						if(g.y === 8) {
+							g.direction = Direction.west;
+							g.mode = Mode.chase;
+							break;
+						}
+
+						g.direction = Direction.north; break;
+				}
+
+				g.gridMove();
+				return;
+			}
+
+			// frightened mode
+			if(g.mode === Mode.frightened) {
+				let newDirection;
+				do {
+					newDirection = Math.floor(Math.random() * (4 - 1 + 1)) + 1;
+				} while(newDirection === Coord.opposite(g.direction) || g.position.adjacentCoord(newDirection).isWall);
+
+				g.direction = newDirection;
+				g.gridMove();
+				return;
+			}
+
+			// chase mode
+			const paths = {
+				1: g.position.adjacentCoord(Direction.north),
+				2: g.position.adjacentCoord(Direction.south),
+				3: g.position.adjacentCoord(Direction.east),
+				4: g.position.adjacentCoord(Direction.west)
+			};
+
+			const back = g.position.adjacentCoord(Coord.opposite(g.direction));
+			const validDirections = Object.keys(paths).filter(k => !paths[k].isWall && !paths[k].equals(back));
+
+			if(NO_UP_TILES.some(t => g.position.equals(t))) {
+				const index = validDirections.indexOf("1");
+				if(index != -1) {
+					validDirections.splice(index, 1);
+				}
+			}
+
+			if(validDirections.length === 0) return;
+
+			let best = null;
+			let direction = null;
+			validDirections.forEach(k => {
+				const distance = Coord.distance(g.target, paths[k]);
+
+				if(best > distance || best === null) {
+					best = distance;
+					direction = k;
+				}
+			});
+
+			g.direction = parseInt(direction);
 			g.gridMove();
 		});
 	} else {
 		// Pacman
-		pacman.frameMove();
-		if(!pacman.isBlocked) pacman.mouthOffset += (pacman.mouthGrowing ? -1 : 1) * (Math.PI / 4) / (SPEED / (1000 / FPS));
+		if(!pacman.isBlocked) {
+			pacman.frameMove();
+			pacman.mouthOffset += (pacman.mouthGrowing ? -1 : 1) * (Math.PI / 4) / (SPEED / (1000 / FPS));
+		}
 
 		// Ghosts
-		ghosts.forEach(g => g.frameMove());
+		ghosts.forEach(g => {
+			if(g.dots < 10) {
+				if(g.bouncingDirection === Direction.north) {
+					if(--g.offsetY === -3) g.bouncingDirection = Direction.south;
+				} else {
+					if(++g.offsetY === +3) g.bouncingDirection = Direction.north;
+				}
+				return;
+			}
+
+			g.frameMove();
+		});
 	}
 
 	draw();
