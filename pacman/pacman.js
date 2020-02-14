@@ -129,14 +129,6 @@ class Coord {
 	}
 }
 
-class MapPart {
-	constructor(x, y, type) {
-		this.x = x;
-		this.y = y;
-		this.type = type;
-	}
-}
-
 class Character {
 	constructor(x, y, direction) {
 		this.position = new Coord(x, y);
@@ -248,7 +240,7 @@ class Behavior {
 
 
 class Ghost extends Character {
-	constructor(name, x, y, direction, color, behavior) {
+	constructor(x, y, direction, color, behavior) {
 		super(x, y, direction);
 		this.name = name;
 		this.color = color;
@@ -376,10 +368,10 @@ function setup() {
 	const otobokeBehavior   = new Behavior(new Coord(0, MAP_HEIGHT - 1), otobokeChaseFunc);
 
 	// Ghosts
-	const oikake    = new Ghost("oikake", 10, 8, Direction.west, "red", oikakeBehavior);
-	const machibuse = new Ghost("machibuse", 10, 10, Direction.north, "pink", machibuseBehavior);
-	const kimagure  = new Ghost("kimagure", 9, 10, Direction.north, "cyan", kimagureBehavior);
-	const otoboke   = new Ghost("otoboke", 11, 10, Direction.north, "orange", otobokeBehavior);
+	const oikake    = new Ghost(10, 8, Direction.west, "red", oikakeBehavior);
+	const machibuse = new Ghost(10, 10, Direction.north, "pink", machibuseBehavior);
+	const kimagure  = new Ghost(9, 10, Direction.north, "cyan", kimagureBehavior);
+	const otoboke   = new Ghost(11, 10, Direction.north, "orange", otobokeBehavior);
 
 	// Fixed dot amounts
 	oikake.dots = 0;
@@ -387,8 +379,8 @@ function setup() {
 
 	// Dynamic dot amounts
 	const dotObject = level < 3 ? GHOST_DOT_AMOUNTS[level - 1] : GHOST_DOT_AMOUNTS[2];
-	kimagure.dots = dotObject[kimagure.name];
-	otoboke.dots  = dotObject[otoboke.name];
+	kimagure.dots = dotObject["kimagure"];
+	otoboke.dots  = dotObject["otoboke"];
 
 	// Fixed mode
 	oikake.mode = Mode.chase;
